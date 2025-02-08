@@ -1,0 +1,24 @@
+{
+  "name": "gravity",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "vite --open",
+    "build": "tsc && vite build",
+    "preview": "tsc && vite build && vite preview --host --open"
+  },
+  "typeRoots": [
+    "node_modules/@types",
+    "src/@types"
+  ],
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.48.0",
+    "@babylonjs/gui": "^7.48.0",
+    "@babylonjs/inspector": "^7.48.0",
+    "@babylonjs/loaders": "^7.48.0",
+    "@babylonjs/materials": "^7.48.0"
+  }
+}
