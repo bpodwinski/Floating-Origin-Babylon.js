@@ -13,6 +13,7 @@ import {
     PBRMetallicRoughnessMaterial,
     Camera,
 } from "@babylonjs/core";
+import "@babylonjs/core/Materials/Textures/Loaders/ktxTextureLoader";
 //import { Effect } from "@babylonjs/core/Materials/effect";
 
 // import venusCloudsFragment from "./shaders/venusCloudsFragmentShader.fragment.fx?raw";
@@ -50,7 +51,7 @@ export class FloatingCameraScene {
         );
 
         camera.touchAngularSensibility = 10000;
-        camera.inertia = 0.1;
+        camera.inertia = 0.3;
 
         camera.speed = ScaleManager.toSimulationUnits(100);
         camera.keysUp.push(90); // Z
@@ -71,8 +72,8 @@ export class FloatingCameraScene {
             "wheel",
             function (e) {
                 camera.speed = Math.min(
-                    10,
-                    Math.max(1, (camera.speed -= e.deltaY * 0.001))
+                    100,
+                    Math.max(0.1, (camera.speed -= e.deltaY * 0.001))
                 );
             },
             { passive: true }
@@ -109,7 +110,7 @@ export class FloatingCameraScene {
 
         let sunLight = new PointLight("sunLight", new Vector3(0, 0, 0), scene);
 
-        sunLight.intensity = 5e10;
+        sunLight.intensity = 9e13;
         sunLight.falloffType = PointLight.FALLOFF_PHYSICAL;
         sunLight.diffuse = new Color3(1, 1, 1);
         sunLight.specular = new Color3(1, 1, 1);
@@ -121,7 +122,7 @@ export class FloatingCameraScene {
         camera.add(entSun);
 
         const sun = MeshBuilder.CreateSphere("sun", {
-            segments: 256,
+            segments: 128,
             diameter: ScaleManager.toSimulationUnits(696_340 * 2),
         });
 
@@ -217,7 +218,7 @@ export class FloatingCameraScene {
         camera.add(entPluto);
 
         const pluto = MeshBuilder.CreateSphere("pluto", {
-            segments: 256,
+            segments: 128,
             diameter: ScaleManager.toSimulationUnits(2_377 * 2),
         });
 
@@ -230,10 +231,10 @@ export class FloatingCameraScene {
             "/pluto/pluto_surface_albedo.ktx2",
             scene
         );
-        plutoMaterial.normalTexture = new Texture(
-            "/pluto/pluto_surface_normal.ktx2",
-            scene
-        );
+        // plutoMaterial.normalTexture = new Texture(
+        //     "/pluto/pluto_surface_normal.ktx2",
+        //     scene
+        // );
 
         plutoMaterial.metallic = 0.0;
         plutoMaterial.roughness = 0.85;
