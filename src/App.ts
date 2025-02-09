@@ -67,12 +67,16 @@ export class FloatingCameraScene {
         camera.attachControl(canvas, true);
 
         // Adjust camera speed with mouse wheel
-        canvas.addEventListener("wheel", function (e) {
-            camera.speed = Math.min(
-                10,
-                Math.max(1, (camera.speed -= e.deltaY * 0.001))
-            );
-        });
+        canvas.addEventListener(
+            "wheel",
+            function (e) {
+                camera.speed = Math.min(
+                    10,
+                    Math.max(1, (camera.speed -= e.deltaY * 0.001))
+                );
+            },
+            { passive: true }
+        );
 
         // Pipeline Begin
         const pipeline = new DefaultRenderingPipeline("Pipeline", true, scene, [
