@@ -41,18 +41,18 @@ export class FloatingCameraScene {
         // Create an OriginCamera, which is a special floating-origin UniversalCamera
         // It works much like UniversalCamera, but we use its doublepos and doubletgt
         // properties instead of position and target
-        let planetTarget = PlanetPosition.Sun.clone();
-        planetTarget.x += ScaleManager.toSimulationUnits(-5_000000);
-        planetTarget.y += ScaleManager.toSimulationUnits(2_500000);
-        planetTarget.z += ScaleManager.toSimulationUnits(1_000_0000);
+        let planetTarget = PlanetPosition.Mercury.clone();
+        planetTarget.x += ScaleManager.toSimulationUnits(-5_000);
+        planetTarget.y += ScaleManager.toSimulationUnits(2_500);
+        planetTarget.z += ScaleManager.toSimulationUnits(1_000_0);
 
         let camera = new OriginCamera("camera", planetTarget, scene);
-        camera.doubletgt = PlanetPosition.Sun;
+        camera.doubletgt = PlanetPosition.Mercury;
 
-        camera.touchAngularSensibility = 10000;
-        camera.inertia = 0.3;
+        camera.touchAngularSensibility = 300000;
+        camera.inertia = 0.4;
 
-        camera.speed = ScaleManager.toSimulationUnits(3000000);
+        camera.speed = ScaleManager.toSimulationUnits(10000);
         camera.keysUp.push(90); // Z
         camera.keysDown.push(83); // S
         camera.keysLeft.push(81); // Q
@@ -61,7 +61,7 @@ export class FloatingCameraScene {
         camera.keysDownward.push(65); // E
         camera.minZ = 0.1;
         camera.maxZ = 1_000_000_000;
-        camera.fov = 0.75;
+        camera.fov = 0.65;
         camera.checkCollisions = true;
         camera.applyGravity = false;
         camera.attachControl(canvas, true);
@@ -105,7 +105,7 @@ export class FloatingCameraScene {
         const environmentMap = new HDRCubeTexture(
             "/starmap_2020_8k.hdr",
             scene,
-            1024
+            2048
         );
 
         scene.createDefaultSkybox(
@@ -127,6 +127,7 @@ export class FloatingCameraScene {
         sunLight.intensityMode = PointLight.INTENSITYMODE_LUMINOUSPOWER;
         sunLight.intensity = 3.75e1;
         sunLight.falloffType = PointLight.FALLOFF_STANDARD;
+        sunLight.range = ScaleManager.toSimulationUnits(7e9);
         sunLight.diffuse = new Color3(1, 1, 1);
         sunLight.specular = new Color3(1, 1, 1);
         sunLight.radius = ScaleManager.toSimulationUnits(696_340);
@@ -147,12 +148,11 @@ export class FloatingCameraScene {
             sun,
             ScaleManager.toSimulationUnits(696_340 * 2)
         );
-        //starGlare.start();
+        starGlare.start();
 
         const glowLayer = new GlowLayer("sunGlow", scene);
-        glowLayer.intensity = 1.2;
-        glowLayer.blurKernelSize = 32;
         glowLayer.addIncludedOnlyMesh(sun);
+
         function updateGlowIntensity() {
             let cameraDistance = Vector3.Distance(
                 camera.doublepos,
@@ -170,10 +170,6 @@ export class FloatingCameraScene {
                     32,
                     32 + 32 * (1 - Math.min(1, cameraDistance / 20_000))
                 )
-            );
-
-            console.log(
-                `Distance: ${cameraDistance}, Glow Intensity: ${glowLayer.intensity}, Glow Size: ${glowLayer.blurKernelSize}`
             );
         }
 
@@ -227,6 +223,8 @@ export class FloatingCameraScene {
         mercuryMaterial.roughness = 0.85;
         mercury.material = mercuryMaterial;
 
+        mercury.isPickable = true;
+        mercury.alwaysSelectAsActiveMesh = true;
         mercury.checkCollisions = true;
         mercury.parent = entMercury;
         // Mercury End
@@ -241,7 +239,7 @@ export class FloatingCameraScene {
         camera.add(entVenus);
 
         const venus = MeshBuilder.CreateSphere("venus", {
-            segments: 256,
+            segments: 128,
             diameter: ScaleManager.toSimulationUnits(6_051.8 * 2),
         });
 
@@ -293,8 +291,6 @@ export class FloatingCameraScene {
 
         plutoMaterial.metallic = 0.0;
         plutoMaterial.roughness = 0.85;
-        plutoMaterial.emissiveColor = new Color3(0.003, 0.003, 0.003);
-        //plutoMaterial.environmentTexture = environmentMap;
         pluto.material = plutoMaterial;
 
         pluto.checkCollisions = true;
@@ -303,11 +299,12 @@ export class FloatingCameraScene {
 
         scene.onBeforeRenderObservable.add(() => {
             updateGlowIntensity();
+            StarGlare.updateParticleSize(camera.doublepos, PlanetPosition.Sun);
 
-            sun.rotation.y += 0.0001;
-            mercury.rotation.y += 0.0005;
-            venus.rotation.y -= 0.00005;
-            pluto.rotation.y += 0.00002;
+            sun.rotation.y += 0.00005;
+            mercury.rotation.y += 0.00001;
+            venus.rotation.y -= 0.000002;
+            pluto.rotation.y += 0.000001;
         });
 
         return scene;
@@ -417,7 +414,7 @@ class Entity extends TransformNode {
 /**
  * Manages scale conversion between real-world distances (in kilometers)
  */
-class ScaleManager {
+export class ScaleManager {
     /**
      * Scale factor to convert kilometers into simulation units.
      * In this context, 1 Babylon.js unit represents 1,000 km.

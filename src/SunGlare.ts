@@ -6,9 +6,12 @@ import {
     Mesh,
     ParticleSystem,
     SphereParticleEmitter,
+    GPUParticleSystem,
 } from "@babylonjs/core";
 
 export class StarGlare {
+    static particleSystem: GPUParticleSystem;
+
     /**
      * Creates a glare effect using a particle system.
      * @param scene - The js scene.
@@ -19,9 +22,15 @@ export class StarGlare {
         scene: Scene,
         emitter: Mesh,
         diameter: number
-    ): ParticleSystem {
-        const particleSystem = new ParticleSystem("starGlare", 100, scene);
+    ): GPUParticleSystem {
+        const particleSystem = new GPUParticleSystem(
+            "starGlare",
+            { capacity: 100 },
+            scene
+        );
 
+        particleSystem.forceDepthWrite = true;
+        particleSystem.isLocal = true;
         particleSystem.emitter = emitter;
         particleSystem.renderingGroupId = 1;
         particleSystem.particleEmitterType = new SphereParticleEmitter(
@@ -31,22 +40,26 @@ export class StarGlare {
 
         particleSystem.particleTexture = new Texture("/T_Star.png", scene);
 
-        particleSystem.minAngularSpeed = 0;
-        particleSystem.maxAngularSpeed = 0;
-        particleSystem.minSize = 500;
-        particleSystem.maxSize = 750;
+        particleSystem.minAngularSpeed = 0.01;
+        particleSystem.maxAngularSpeed = 0.1;
+
+        particleSystem.minSize = 10000;
+        particleSystem.maxSize = 20000;
+
         particleSystem.minScaleX = 2.0;
-        particleSystem.maxScaleX = 8.0;
+        particleSystem.maxScaleX = 10.0;
+
         particleSystem.minScaleY = 1.0;
-        particleSystem.maxScaleY = 10.0;
+        particleSystem.maxScaleY = 13.0;
 
         particleSystem.minEmitPower = 0;
         particleSystem.maxEmitPower = 0;
-        particleSystem.minLifeTime = 5;
-        particleSystem.maxLifeTime = 10;
 
-        particleSystem.emitRate = 600;
-        particleSystem.updateSpeed = 0.01;
+        particleSystem.minLifeTime = 1;
+        particleSystem.maxLifeTime = 2.5;
+
+        particleSystem.emitRate = 200;
+        particleSystem.updateSpeed = 0.002;
         particleSystem.targetStopDuration = 0;
 
         particleSystem.gravity = new Vector3(0, 0, 0);
@@ -63,23 +76,43 @@ export class StarGlare {
         particleSystem.minInitialRotation = -Math.PI * 2;
         particleSystem.maxInitialRotation = Math.PI * 2;
 
-        particleSystem.addColorGradient(
-            0,
-            new Color4(0.8509, 0.4784, 0.1019, 0.02)
-        );
-        particleSystem.addColorGradient(
-            0.5,
-            new Color4(0.6039, 0.2887, 0.0579, 0.25)
-        );
-        particleSystem.addColorGradient(
-            1,
-            new Color4(0.3207, 0.0713, 0.0075, 0.02)
-        );
+        particleSystem.addColorGradient(0, new Color4(0.7, 0.7, 0.9, 0.01));
+        particleSystem.addColorGradient(0.5, new Color4(0.7, 0.7, 0.95, 0.012));
+        particleSystem.addColorGradient(1, new Color4(0.0, 0.0, 0.0, 0.01));
 
         particleSystem.textureMask = new Color4(1, 1, 1, 1);
 
         particleSystem.preventAutoStart = true;
 
+        StarGlare.particleSystem = particleSystem;
+
         return particleSystem;
+    }
+
+    public static updateParticleSize(
+        cameraPosition: Vector3,
+        emitterPosition: Vector3
+    ): void {
+        let cameraDistance = Vector3.Distance(cameraPosition, emitterPosition);
+
+        let newMinSize = Math.max(
+            1_000_0,
+            Math.min(5_000_0, cameraDistance / 5)
+        );
+        let newMaxSize = Math.max(
+            2_000_0,
+            Math.min(1_000_00, cameraDistance / 5)
+        );
+
+        StarGlare.particleSystem.minSize = newMinSize;
+        StarGlare.particleSystem.maxSize = newMaxSize;
+
+        // console.log(
+        //     `✨ Particles Distance: ${cameraDistance.toFixed(
+        //         2
+        //     )} | minSize: ${newMinSize.toFixed(
+        //         2
+        //     )} | maxSize: ${newMaxSize.toFixed(2)}`
+        // );
     }
 }
