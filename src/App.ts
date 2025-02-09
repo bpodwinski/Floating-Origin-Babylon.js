@@ -6,15 +6,17 @@ import {
     MeshBuilder,
     TransformNode,
     Color3,
-    StandardMaterial,
     PointLight,
     Texture,
     DefaultRenderingPipeline,
     PBRMetallicRoughnessMaterial,
     Camera,
+    HDRCubeTexture,
+    GlowLayer,
 } from "@babylonjs/core";
 import "@babylonjs/core/Materials/Textures/Loaders/ktxTextureLoader";
-//import { Effect } from "@babylonjs/core/Materials/effect";
+
+import { StarGlare } from "./SunGlare";
 
 // import venusCloudsFragment from "./shaders/venusCloudsFragmentShader.fragment.fx?raw";
 // import venusCloudsVertex from "./shaders/venusCloudsVertexShader.vertex.fx?raw";
@@ -39,21 +41,18 @@ export class FloatingCameraScene {
         // Create an OriginCamera, which is a special floating-origin UniversalCamera
         // It works much like UniversalCamera, but we use its doublepos and doubletgt
         // properties instead of position and target
-        let camera = new OriginCamera(
-            "camera",
-            ScaleManager.toSimulationVector(
-                new Vector3(5_906_400_000 - 10_000, 0, 10_000)
-            ),
-            scene
-        );
-        camera.doubletgt = ScaleManager.toSimulationVector(
-            new Vector3(5_906_400_000, 0, 0)
-        );
+        let planetTarget = PlanetPosition.Sun.clone();
+        planetTarget.x += ScaleManager.toSimulationUnits(-5_000000);
+        planetTarget.y += ScaleManager.toSimulationUnits(2_500000);
+        planetTarget.z += ScaleManager.toSimulationUnits(1_000_0000);
+
+        let camera = new OriginCamera("camera", planetTarget, scene);
+        camera.doubletgt = PlanetPosition.Sun;
 
         camera.touchAngularSensibility = 10000;
         camera.inertia = 0.3;
 
-        camera.speed = ScaleManager.toSimulationUnits(100);
+        camera.speed = ScaleManager.toSimulationUnits(3000000);
         camera.keysUp.push(90); // Z
         camera.keysDown.push(83); // S
         camera.keysLeft.push(81); // Q
@@ -85,15 +84,15 @@ export class FloatingCameraScene {
         ]);
         pipeline.imageProcessingEnabled = true;
         pipeline.imageProcessing.toneMappingEnabled = true;
-        pipeline.imageProcessing.toneMappingType = 2;
+        pipeline.imageProcessing.toneMappingType = 1;
         pipeline.imageProcessing.exposure = 1.2;
         pipeline.imageProcessing.contrast = 1.0;
 
         pipeline.fxaaEnabled = true;
         pipeline.bloomEnabled = true;
         pipeline.bloomThreshold = 0;
-        pipeline.bloomKernel = 80;
-        pipeline.bloomWeight = 0.2;
+        pipeline.bloomKernel = 90;
+        pipeline.bloomWeight = 0.4;
 
         pipeline.sharpenEnabled = true;
         pipeline.sharpen.edgeAmount = 0.1;
@@ -101,6 +100,21 @@ export class FloatingCameraScene {
 
         pipeline.samples = 4;
         // Pipeline End
+
+        // Skybox Begin
+        const environmentMap = new HDRCubeTexture(
+            "/starmap_2020_8k.hdr",
+            scene,
+            1024
+        );
+
+        scene.createDefaultSkybox(
+            environmentMap,
+            true,
+            ScaleManager.toSimulationUnits(100_000_000_000)
+        );
+        scene.environmentTexture = environmentMap;
+        // Skybox End
 
         // Sun Begin
         // Light
@@ -110,10 +124,12 @@ export class FloatingCameraScene {
 
         let sunLight = new PointLight("sunLight", new Vector3(0, 0, 0), scene);
 
-        sunLight.intensity = 9e13;
-        sunLight.falloffType = PointLight.FALLOFF_PHYSICAL;
+        sunLight.intensityMode = PointLight.INTENSITYMODE_LUMINOUSPOWER;
+        sunLight.intensity = 3.75e1;
+        sunLight.falloffType = PointLight.FALLOFF_STANDARD;
         sunLight.diffuse = new Color3(1, 1, 1);
         sunLight.specular = new Color3(1, 1, 1);
+        sunLight.radius = ScaleManager.toSimulationUnits(696_340);
         sunLight.parent = entSunLight;
 
         // Object
@@ -126,94 +142,133 @@ export class FloatingCameraScene {
             diameter: ScaleManager.toSimulationUnits(696_340 * 2),
         });
 
-        let sunMaterial = new StandardMaterial("sunMaterial", scene);
+        const starGlare = StarGlare.create(
+            scene,
+            sun,
+            ScaleManager.toSimulationUnits(696_340 * 2)
+        );
+        //starGlare.start();
 
-        sunMaterial.diffuseColor = new Color3(1, 0.8, 0);
-        sunMaterial.emissiveColor = new Color3(1, 0.8, 0);
-        sunMaterial.specularColor = new Color3(0, 0, 0);
+        const glowLayer = new GlowLayer("sunGlow", scene);
+        glowLayer.intensity = 1.2;
+        glowLayer.blurKernelSize = 32;
+        glowLayer.addIncludedOnlyMesh(sun);
+        function updateGlowIntensity() {
+            let cameraDistance = Vector3.Distance(
+                camera.doublepos,
+                PlanetPosition.Sun
+            );
 
+            glowLayer.intensity = Math.max(
+                0.65,
+                Math.min(1.2, cameraDistance / 15_000)
+            );
+
+            glowLayer.blurKernelSize = Math.min(
+                64,
+                Math.max(
+                    32,
+                    32 + 32 * (1 - Math.min(1, cameraDistance / 20_000))
+                )
+            );
+
+            console.log(
+                `Distance: ${cameraDistance}, Glow Intensity: ${glowLayer.intensity}, Glow Size: ${glowLayer.blurKernelSize}`
+            );
+        }
+
+        let sunMaterial = new PBRMetallicRoughnessMaterial(
+            "sunMaterial",
+            scene
+        );
+
+        sunMaterial.emissiveTexture = new Texture(
+            "/sun/sun__surface_albedo.ktx2",
+            scene
+        );
+        sunMaterial.emissiveColor = new Color3(1, 1, 1);
+        sunMaterial.metallic = 0.0;
+        sunMaterial.roughness = 0.0;
         sun.material = sunMaterial;
+
+        sun.checkCollisions = true;
         sun.parent = entSun;
         // Sun End
 
         // Mercury Begin
-        // const entMercury = new Entity("entMercury", scene);
-        // entMercury.doublepos.set(
-        //     ScaleManager.toSimulationUnits(57_910_000),
-        //     0,
-        //     0
-        // );
-        // camera.add(entMercury);
+        const entMercury = new Entity("entMercury", scene);
+        entMercury.doublepos.set(
+            PlanetPosition.Mercury._x,
+            PlanetPosition.Mercury._y,
+            PlanetPosition.Mercury._z
+        );
+        camera.add(entMercury);
 
-        // const mercury = MeshBuilder.CreateSphere("mercury", {
-        //     segments: 256,
-        //     diameter: ScaleManager.toSimulationUnits(2_439.7 * 2),
-        // });
+        const mercury = MeshBuilder.CreateSphere("mercury", {
+            segments: 128,
+            diameter: ScaleManager.toSimulationUnits(2_439.7 * 2),
+        });
 
-        // let mercuryMaterial = new PBRMetallicRoughnessMaterial(
-        //     "mercuryMaterial",
-        //     scene
-        // );
+        let mercuryMaterial = new PBRMetallicRoughnessMaterial(
+            "mercuryMaterial",
+            scene
+        );
 
-        // mercuryMaterial.baseTexture = new Texture(
-        //     "/mercury/mercury_surface_albedo.ktx2",
-        //     scene
-        // );
-        // mercuryMaterial.normalTexture = new Texture(
-        //     "/mercury/mercury_surface_albedo.ktx2",
-        //     scene
-        // );
+        mercuryMaterial.baseTexture = new Texture(
+            "/mercury/mercury_surface_albedo.ktx2",
+            scene
+        );
+        mercuryMaterial.normalTexture = new Texture(
+            "/mercury/mercury_surface_normal.ktx2",
+            scene
+        );
 
-        // mercuryMaterial.metallic = 0.0;
-        // mercuryMaterial.roughness = 0.85;
-        // mercury.material = mercuryMaterial;
+        mercuryMaterial.metallic = 0.0;
+        mercuryMaterial.roughness = 0.85;
+        mercury.material = mercuryMaterial;
 
-        // mercury.checkCollisions = true;
-        // mercury.parent = entMercury;
+        mercury.checkCollisions = true;
+        mercury.parent = entMercury;
         // Mercury End
 
         // Venus Begin
-        // const entVenus = new Entity("entVenus", scene);
-        // entVenus.doublepos.set(
-        //     ScaleManager.toSimulationUnits(108_200_000),
-        //     0,
-        //     0
-        // );
-        // camera.add(entVenus);
+        const entVenus = new Entity("entVenus", scene);
+        entVenus.doublepos.set(
+            PlanetPosition.Venus._x,
+            PlanetPosition.Venus._y,
+            PlanetPosition.Venus._z
+        );
+        camera.add(entVenus);
 
-        // const venus = MeshBuilder.CreateSphere("venus", {
-        //     segments: 256,
-        //     diameter: ScaleManager.toSimulationUnits(6_051.8 * 2),
-        // });
+        const venus = MeshBuilder.CreateSphere("venus", {
+            segments: 256,
+            diameter: ScaleManager.toSimulationUnits(6_051.8 * 2),
+        });
 
-        // let venusMaterial = new PBRMetallicRoughnessMaterial(
-        //     "venusMaterial",
-        //     scene
-        // );
+        let venusMaterial = new PBRMetallicRoughnessMaterial(
+            "venusMaterial",
+            scene
+        );
 
-        // venusMaterial.baseTexture = new Texture(
-        //     "/venus/venus_surface_albedo.ktx2",
-        //     scene
-        // );
-        // venusMaterial.normalTexture = new Texture(
-        //     "/venus/venus_surface_bump.ktx2",
-        //     scene
-        // );
+        venusMaterial.baseTexture = new Texture(
+            "/venus/venus_atmosphere_albedo.ktx2",
+            scene
+        );
 
-        // venusMaterial.metallic = 0.0;
-        // venusMaterial.roughness = 0.85;
-        // venus.material = venusMaterial;
+        venusMaterial.metallic = 0.0;
+        venusMaterial.roughness = 0.85;
+        venus.material = venusMaterial;
 
-        // venus.checkCollisions = true;
-        // venus.parent = entVenus;
+        venus.checkCollisions = true;
+        venus.parent = entVenus;
         // Venus End
 
         // Pluto Begin
         const entPluto = new Entity("entPluto", scene);
         entPluto.doublepos.set(
-            ScaleManager.toSimulationUnits(5_906_400_000),
-            0,
-            0
+            PlanetPosition.Pluto._x,
+            PlanetPosition.Pluto._y,
+            PlanetPosition.Pluto._z
         );
         camera.add(entPluto);
 
@@ -231,18 +286,29 @@ export class FloatingCameraScene {
             "/pluto/pluto_surface_albedo.ktx2",
             scene
         );
-        // plutoMaterial.normalTexture = new Texture(
-        //     "/pluto/pluto_surface_normal.ktx2",
-        //     scene
-        // );
+        plutoMaterial.normalTexture = new Texture(
+            "/pluto/pluto_surface_normal.ktx2",
+            scene
+        );
 
         plutoMaterial.metallic = 0.0;
         plutoMaterial.roughness = 0.85;
+        plutoMaterial.emissiveColor = new Color3(0.003, 0.003, 0.003);
+        //plutoMaterial.environmentTexture = environmentMap;
         pluto.material = plutoMaterial;
 
         pluto.checkCollisions = true;
         pluto.parent = entPluto;
         // Pluto End
+
+        scene.onBeforeRenderObservable.add(() => {
+            updateGlowIntensity();
+
+            sun.rotation.y += 0.0001;
+            mercury.rotation.y += 0.0005;
+            venus.rotation.y -= 0.00005;
+            pluto.rotation.y += 0.00002;
+        });
 
         return scene;
     }
@@ -377,4 +443,35 @@ class ScaleManager {
     public static toSimulationVector(position_km: Vector3): Vector3 {
         return position_km.scale(this.SCALE_FACTOR);
     }
+}
+
+class PlanetPosition {
+    static Sun = ScaleManager.toSimulationVector(new Vector3(0, 0, 0));
+    static Mercury = ScaleManager.toSimulationVector(
+        new Vector3(57_910_000, 0, 0)
+    );
+    static Venus = ScaleManager.toSimulationVector(
+        new Vector3(108_200_000, 0, 0)
+    );
+    static Earth = ScaleManager.toSimulationVector(
+        new Vector3(149_600_000, 0, 0)
+    );
+    static Mars = ScaleManager.toSimulationVector(
+        new Vector3(227_900_000, 0, 0)
+    );
+    static Jupiter = ScaleManager.toSimulationVector(
+        new Vector3(778_500_000, 0, 0)
+    );
+    static Saturn = ScaleManager.toSimulationVector(
+        new Vector3(1_429_000_000, 0, 0)
+    );
+    static Uranus = ScaleManager.toSimulationVector(
+        new Vector3(2_870_000_000, 0, 0)
+    );
+    static Neptune = ScaleManager.toSimulationVector(
+        new Vector3(4_500_000_000, 0, 0)
+    );
+    static Pluto = ScaleManager.toSimulationVector(
+        new Vector3(5_906_400_000, 0, 0)
+    );
 }
