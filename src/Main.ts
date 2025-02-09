@@ -5,17 +5,17 @@ import "@babylonjs/inspector";
 import { FloatingCameraScene } from "./App";
 
 window.addEventListener("DOMContentLoaded", () => {
-  const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
-  const engine = new Engine(canvas, true);
+    const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
+    const engine = new Engine(canvas, true);
 
-  const scene = FloatingCameraScene.CreateScene(engine, canvas);
-  scene.debugLayer.show({ overlay: true });
+    const scene = FloatingCameraScene.CreateScene(engine, canvas);
+    scene.debugLayer.show({ overlay: true });
 
-  engine.runRenderLoop(() => {
-    scene.render();
-  });
+    engine.runRenderLoop(() => {
+        scene.render();
+    });
 
-  window.addEventListener("resize", () => {
-    engine.resize();
-  });
+    window.addEventListener("resize", () => {
+        engine.resize();
+    });
 });

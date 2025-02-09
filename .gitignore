@@ -1,2 +1,9 @@
 node_modules
 *.jpg
+*.png
+*.webp
+*.ktx2
+*.dds
+*.tif
+.gitignore
+package-lock.json
