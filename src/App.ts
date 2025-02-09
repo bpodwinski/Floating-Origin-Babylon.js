@@ -13,14 +13,14 @@ import {
     PBRMetallicRoughnessMaterial,
     Camera,
 } from "@babylonjs/core";
-import { Effect } from "@babylonjs/core/Materials/effect";
+//import { Effect } from "@babylonjs/core/Materials/effect";
 
-import venusCloudsFragment from "./shaders/venusCloudsFragmentShader.fragment.fx?raw";
-import venusCloudsVertex from "./shaders/venusCloudsVertexShader.vertex.fx?raw";
+// import venusCloudsFragment from "./shaders/venusCloudsFragmentShader.fragment.fx?raw";
+// import venusCloudsVertex from "./shaders/venusCloudsVertexShader.vertex.fx?raw";
 
-Effect.ShadersStore[`${venusCloudsVertex}VertexShader`] = venusCloudsVertex;
-Effect.ShadersStore[`${venusCloudsFragment}FragmentShader`] =
-    venusCloudsFragment;
+// Effect.ShadersStore[`${venusCloudsVertex}VertexShader`] = venusCloudsVertex;
+// Effect.ShadersStore[`${venusCloudsFragment}FragmentShader`] =
+//     venusCloudsFragment;
 
 export class FloatingCameraScene {
     public static CreateScene(
